@@ -106,7 +106,7 @@ class ConfigManager:
                 "enable_cache": True,
                 "clear_cache_on_init": False,
                 "max_retry_attempts": 3,
-                "enable_headless": False,
+                "enable_headless": True,
                 "viewport_width": 1920,
                 "viewport_height": 1080,
             },
