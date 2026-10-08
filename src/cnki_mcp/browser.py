@@ -1,5 +1,6 @@
 """知网浏览器自动化模块 - 单例模式，保持会话"""
 
+import os
 import time
 import random
 import atexit
@@ -125,20 +126,40 @@ class CNKIBrowser:
         viewport_width = config.get_optimization('viewport_width', 1920)
         viewport_height = config.get_optimization('viewport_height', 1080)
         page_timeout = config.get_timeout('page_goto_timeout', 60000)
-        headless = config.get_optimization('enable_headless', False)
+        # 无头模式：优先读取环境变量 CNKI_HEADLESS，其次读配置文件，默认 True
+        env_headless = os.environ.get("CNKI_HEADLESS", "").strip().lower()
+        if env_headless in ("true", "1", "yes"):
+            headless = True
+        elif env_headless in ("false", "0", "no"):
+            headless = False
+        else:
+            headless = config.get_optimization('enable_headless', True)
+
+        safe_print(f"    [DEBUG] 无头模式: {headless}")
 
         safe_print("    [DEBUG] 启动 Playwright...")
         self._playwright = sync_playwright().start()
-        
+
+        # 无头模式下需要额外的 Linux 兼容参数
+        browser_args = [
+            "--disable-blink-features=AutomationControlled",
+            "--disable-infobars",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+        ]
+        if headless:
+            browser_args += [
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+                "--disable-extensions",
+                "--single-process",
+                "--disable-setuid-sandbox",
+            ]
+            
         safe_print("    [DEBUG] 启动 Chromium...")
         self._browser = self._playwright.chromium.launch(
             headless=headless,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--disable-infobars",
-                "--no-sandbox",
-                "--disable-dev-shm-usage"
-            ],
+            args=browser_args,
             slow_mo=slow_mo
         )
         
